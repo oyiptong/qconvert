@@ -92,9 +92,10 @@ if __name__ == "__main__":
     # base64 dataURI
     if args.b64:
         with open(args.outfilename, 'r') as infile:
-            with open("{0}.json".format(path_segment), 'w') as outfile:
+            out_json = "{}.json".format(path_segment)
+            with open(out_json, 'w') as outfile:
                 data = infile.read()
                 encoded = base64.b64encode(data)
                 json.dump({"dataURI": encoded}, outfile)
-                logger.info("wrote ./out.json")
+                logger.info("wrote {}".format(out_json))
 
