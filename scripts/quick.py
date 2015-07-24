@@ -75,7 +75,7 @@ if __name__ == "__main__":
         optimized_size = os.stat(optimized_filename).st_size
         logger.info("{0}-optimized size: {1} regular: {2}".format(cmd_params["bin"], optimized_size, resized_size))
 
-        if optimized_size > resized_size:
+        if optimized_size < resized_size:
             shutil.move(optimized_filename, args.outfilename)
             os.remove(temp_resized)
         else:
