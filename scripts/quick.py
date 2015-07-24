@@ -51,6 +51,8 @@ if __name__ == "__main__":
         optimized_filename = "/tmp/temp-opt{0}".format(ext)
 
         format = ext[1:] # extension without the dot
+        if format.lower() == 'jpg':
+            format = 'jpeg'
         image.save(temp_resized, format)
 
         cmd_params = image_processors.get(ext)
