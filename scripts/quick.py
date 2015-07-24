@@ -31,7 +31,7 @@ if __name__ == "__main__":
     parser.add_argument('-x', '--width', type=int, help="output image width", dest="width")
     parser.add_argument('-y', '--height', type=int, help="scale image height", dest="height")
     parser.add_argument('-v', '--verbose', action="store_true", dest="verbose", default=False)
-    parser.add_argument('-no-opt', help="optimize image output size", action="store_false", dest="optimize", default="True")
+    parser.add_argument('--no-opt', help="optimize image output size", action="store_false", dest="optimize", default="True")
     parser.add_argument('--no-b64', help="disable b64 output", action="store_false", dest="b64", default=True)
     args = parser.parse_args()
 
@@ -46,41 +46,46 @@ if __name__ == "__main__":
 
     # optimization
     path_segment, ext = os.path.splitext(args.outfilename.lower())
-    if ext in image_processors and args.optimize:
-        temp_resized = "/tmp/temp{0}".format(ext)
-        optimized_filename = "/tmp/temp-opt{0}".format(ext)
 
+    if ext in image_processors:
+
+        temp_resized = "/tmp/temp{0}".format(ext)
         format = ext[1:] # extension without the dot
         if format.lower() == 'jpg':
             format = 'jpeg'
         image.save(temp_resized, format)
 
-        cmd_params = image_processors.get(ext)
-        executable = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../bin", cmd_params["bin"])
-        cmd_args = [executable]
-        for param in cmd_params["options"]:
-            if param is None:
-                cmd_args.append(optimized_filename)
+        if args.optimize:
+            optimized_filename = "/tmp/temp-opt{0}".format(ext)
+            cmd_params = image_processors.get(ext)
+            executable = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../bin", cmd_params["bin"])
+            cmd_args = [executable]
+            for param in cmd_params["options"]:
+                if param is None:
+                    cmd_args.append(optimized_filename)
+                else:
+                    cmd_args.append(param)
+            cmd_args.append(temp_resized)
+
+            rv = subprocess.call(cmd_args, stdout=sys.stdout, stderr=sys.stderr)
+            if rv != 0:
+                logger.error("optimization failed")
+                sys.exit(rv)
+
+            # check if optimized image is actually smaller
+            resized_size = os.stat(temp_resized).st_size
+            optimized_size = os.stat(optimized_filename).st_size
+            logger.info("{0}-optimized size: {1} regular: {2}".format(cmd_params["bin"], optimized_size, resized_size))
+
+            if optimized_size < resized_size:
+                shutil.move(optimized_filename, args.outfilename)
+                os.remove(temp_resized)
             else:
-                cmd_args.append(param)
-        cmd_args.append(temp_resized)
+                shutil.move(temp_resized, args.outfilename)
+                os.remove(optimized_filename)
 
-        rv = subprocess.call(cmd_args, stdout=sys.stdout, stderr=sys.stderr)
-        if rv != 0:
-            logger.error("optimization failed")
-            sys.exit(rv)
-
-        # check if optimized image is actually smaller
-        resized_size = os.stat(temp_resized).st_size
-        optimized_size = os.stat(optimized_filename).st_size
-        logger.info("{0}-optimized size: {1} regular: {2}".format(cmd_params["bin"], optimized_size, resized_size))
-
-        if optimized_size < resized_size:
-            shutil.move(optimized_filename, args.outfilename)
-            os.remove(temp_resized)
         else:
             shutil.move(temp_resized, args.outfilename)
-            os.remove(optimized_filename)
 
         logger.info("wrote {0}".format(args.outfilename))
 
